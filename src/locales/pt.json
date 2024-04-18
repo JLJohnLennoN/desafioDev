@@ -1,0 +1,5 @@
+{
+  "welcome_message": "Location permission not granted",
+  "error_message": "Error obtaining user location",
+  "route_button": "Route"
+}

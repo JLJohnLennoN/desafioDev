@@ -1,5 +1,10 @@
+import 'intl';
+import 'intl/locale-data/jsonp/pt';
+
 import React from 'react';
 import { StatusBar } from 'react-native';
+
+import './i18n'
 
 
 import { NavigationContainer } from '@react-navigation/native';

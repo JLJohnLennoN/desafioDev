@@ -1,23 +1,44 @@
-//Importações
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, Button } from 'react-native';
 import MapView, { Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { useTranslation } from 'react-i18next';
+import jsonData from '../../data/frontend_data_gps.json';// Importar os dados do arquivo JSON
+
+const dataGps = jsonData.courses;
 
 export default function Home (){
+  const {t} = useTranslation()
   // Definindo estados para a localização e mensagem de erro
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  
+  const [selectedRoute, setSelectedRoute] = useState(null);
 
-  // Efeito que é executado uma vez, quando o componente é montado
+  const mapViewRef = useRef(null);
+
+    // Função que lida com a seleção de uma rota
+    const handleRouteSelection = (index) => {
+      setSelectedRoute(index);
+      if (mapViewRef.current && dataGps[index].gps.length > 0) {
+        mapViewRef.current.animateCamera({
+          center: {
+            latitude: dataGps[index].gps[0].latitude,
+            longitude: dataGps[index].gps[0].longitude,
+          },
+          pitch: 45,
+          altitude: 0,
+          heading: 0,
+          zoom: 16,
+        });
+      }
+    };
+
+    // Solicita permissão para acessar a localização do usuário
   useEffect(() => {
-    (async () => {
-      // Solicita permissão para acessar a localização do usuário
+    const requestLocation = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        // Se a permissão não for concedida, define uma mensagem de erro
-        setErrorMsg('Permissão de localização não concedida');
+      if (status!== 'granted') {
+        setErrorMsg(`${t('welcome_message')}`);
         return;
       }
 
@@ -28,12 +49,24 @@ export default function Home (){
         setLocation(userLocation);
       } catch (error) {
         // Se ocorrer um erro ao obter a localização, define uma mensagem de erro
-        setErrorMsg('Erro ao obter a localização do usuário');
+        setErrorMsg(`${t('error_message')}`);
       }
-    })();
+    };
+
+    requestLocation();
   }, []); // O array vazio como segundo argumento garante que o efeito seja executado apenas uma vez
 
-  // Retorna a estrutura do componente
+  // Obtem a matriz "gps" dos dados JSON
+  const gpsArray = selectedRoute ? dataGps[selectedRoute].gps : [];
+
+  // Função map() para percorrer o array e retornar um novo array com apenas as propriedades "longitude" e "latitude"
+  const longitudeLatitudeArray = gpsArray.map(item => {
+    return {
+      longitude: item.longitude,
+      latitude: item.latitude,
+    };
+  });
+
   return (
     <View style={styles.container}>
       {/* Renderiza a mensagem de erro, se houver */}
@@ -42,6 +75,7 @@ export default function Home (){
       {location && location.coords && (
         <MapView
           style={styles.map}
+          ref={mapViewRef}
           showsUserLocation={true}
           showsMyLocationButton={true}
           initialRegion={{
@@ -51,18 +85,24 @@ export default function Home (){
             longitudeDelta: 0.0421,
           }}
         >
-          {/* Renderiza a rota a partir dos dados do arquivo JSON 
-          {frontendDataGPS.route && (
-            <Polyline
-              coordinates={frontendDataGPS.route}
-              
-              strokeWidth={2}
-              strokeColor="#00f"
-            />
-          )}
-          */}
+          {/* Renderiza a linha no mapa usando o array de longitude e latitude */}
+          <Polyline
+            coordinates={longitudeLatitudeArray}
+            strokeColor="#4169E1" // Defina a cor da linha aqui
+            strokeWidth={3} // Defina a largura da linha aqui
+          />
         </MapView>
       )}
+       {/* Renderiza os botões que permitem ao usuário selecionar a rota */}
+       <View style={styles.buttons}>
+        {dataGps.map((route, index) => (
+          <Button
+            key={index}
+            title={`${t('route_button')} ${index + 1}`}
+            onPress={() => handleRouteSelection(index)}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -74,5 +114,10 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  buttons: {
+    flexDirection: 'row',
+    justifyContent: 'pace-around',
+    padding: 10,
   },
 });
