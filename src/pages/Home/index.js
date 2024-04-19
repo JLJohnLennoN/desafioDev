@@ -4,6 +4,8 @@ import MapView, { Polyline, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import jsonData from '../../data/frontend_data_gps.json';// Importar os dados do arquivo JSON
+import Car from '../../components/car';
+import CarMarker from '../../components/carMarker'; // Importar o componente Car
 
 const R = 6371; // Radius of the earth in km
 const dataGps = jsonData.courses;
@@ -13,8 +15,8 @@ export default function Home (){
   // Definindo estados para a localização e mensagem de erro
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-
   const [speed, setSpeed] = useState(0);
+
   const [selectedRoute, setSelectedRoute] = useState(null);
   const mapViewRef = useRef(null);
   const markerRef = useRef(null);
@@ -39,8 +41,6 @@ export default function Home (){
   // UseEffect para obter a velocidade atual do veículo
   useEffect(() => {
     let previousLocation = null;
-    let distance = 0;
-    let time = 0;
 
     const interval = setInterval(() => {
       if (location && location.coords) {
@@ -51,10 +51,8 @@ export default function Home (){
             location.coords.latitude,
             location.coords.longitude
           );
-          distance += newDistance;
           const newTime = new Date().getTime();
-          time = newTime - time;
-          const newSpeed = distance / time;
+          const newSpeed = location.coords.speed;
           setSpeed(newSpeed);
         }
         previousLocation = { ...location.coords };
@@ -86,8 +84,7 @@ export default function Home (){
     };
 
     requestLocation();
-  }, []); // O array vazio como segundo argumento garante que o efeito seja executado apenas uma vez
-
+}, []); // O array vazio como segundo argumento garante que o efeito seja executado apenas uma vez
 
   // Função para calcular a distância entre dois pontos usando a fórmula de Haversine
   const haversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -110,7 +107,7 @@ export default function Home (){
   // Obtem a matriz "gps" dos dados JSON
   const gpsArray = selectedRoute ? dataGps[selectedRoute].gps : [];
 
-  // Função map() para percorrer o array e retornar um novo array com apenas as propriedades "longitude" e "latitude"
+  // Função map() para percorrer o array e retornar um novo array com apenas as
   const longitudeLatitudeArray = gpsArray.map(item => {
     return {
       longitude: item.longitude,
@@ -144,21 +141,11 @@ export default function Home (){
           />
           {/* Renderiza o marcador nas coordenadas selecionadas */}
           {selectedRoute !== null && (
-            <Marker
-              ref={markerRef}
-              coordinate={longitudeLatitudeArray[0]}
-              onPress={() => {
-                Alert.alert(
-                  t('marker_title'),
-                  `${t('speed_message')} ${speed} km/h\n${t('distance_message')} ${haversineDistance(
-                    location.coords.latitude,
-                    location.coords.longitude,
-                    longitudeLatitudeArray[0].latitude,
-                    longitudeLatitudeArray[0].longitude
-                  ).toFixed(2)} km`
-                );
-              }}
-            />
+                  <CarMarker
+                  coordinate={longitudeLatitudeArray[0]}
+                  direction="N"
+                />
+
           )}
         </MapView>
       )}
@@ -186,7 +173,7 @@ const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: 'row',
-    justifyContent: 'pace-around',
+    justifyContent: 'space-between',
     padding: 10,
   },
 });

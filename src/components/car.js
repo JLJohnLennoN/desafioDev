@@ -4,8 +4,7 @@ import { View, Image } from 'react-native';
 const carSprite = require('../assets/vehicles.png'); // Caminho para o sprite
 
 export default function Car  ({ direction })  {
-    // Suponha que cada imagem do carro no sprite tem 50x50 pixels
-    const spriteSize = 50;
+    const spriteSize = 370;
 
     // Mapeando direções para posições no sprite
     const directionMap = {
