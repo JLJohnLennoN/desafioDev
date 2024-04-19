@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import jsonData from '../../data/frontend_data_gps.json';// Importar os dados do arquivo JSON
 
+const R = 6371; // Radius of the earth in km
 const dataGps = jsonData.courses;
 
 export default function Home (){
@@ -12,30 +13,60 @@ export default function Home (){
   // Definindo estados para a localização e mensagem de erro
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [selectedRoute, setSelectedRoute] = useState(null);
 
+  const [speed, setSpeed] = useState(0);
+  const [selectedRoute, setSelectedRoute] = useState(null);
   const mapViewRef = useRef(null);
 
-    // Função que lida com a seleção de uma rota
-    const handleRouteSelection = (index) => {
-      setSelectedRoute(index);
-      if (mapViewRef.current && dataGps[index].gps.length > 0) {
-        mapViewRef.current.animateCamera({
-          center: {
-            latitude: dataGps[index].gps[0].latitude,
-            longitude: dataGps[index].gps[0].longitude,
-          },
-          pitch: 45,
-          altitude: 0,
-          heading: 0,
-          zoom: 16,
-        });
-      }
-    };
+  // Função que lida com a seleção de uma rota
+  const handleRouteSelection = (index) => {
+    setSelectedRoute(index);
+    if (mapViewRef.current && dataGps[index].gps.length > 0) {
+      mapViewRef.current.animateCamera({
+        center: {
+          latitude: dataGps[index].gps[0].latitude,
+          longitude: dataGps[index].gps[0].longitude,
+        },
+        pitch: 45,
+        altitude: 0,
+        heading: 0,
+        zoom: 16,
+      });
+    }
+  };
 
-    // Solicita permissão para acessar a localização do usuário
+  // UseEffect para obter a velocidade atual do veículo
+  useEffect(() => {
+    let previousLocation = null;
+    let distance = 0;
+    let time = 0;
+
+    const interval = setInterval(() => {
+      if (location && location.coords) {
+        if (previousLocation) {
+          const newDistance = haversineDistance(
+            previousLocation.latitude,
+            previousLocation.longitude,
+            location.coords.latitude,
+            location.coords.longitude
+          );
+          distance += newDistance;
+          const newTime = new Date().getTime();
+          time = newTime - time;
+          const newSpeed = distance / time;
+          setSpeed(newSpeed);
+        }
+        previousLocation = { ...location.coords };
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [location]); // O array vazio como segundo argumento garante que o efeito seja executado apenas uma vez
+
+  // UseEffect para obter a velocidade atual do veículo
   useEffect(() => {
     const requestLocation = async () => {
+      // Solicita permissão para acessar a localização do usuário
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status!== 'granted') {
         setErrorMsg(`${t('welcome_message')}`);
@@ -55,6 +86,25 @@ export default function Home (){
 
     requestLocation();
   }, []); // O array vazio como segundo argumento garante que o efeito seja executado apenas uma vez
+
+
+  // Função para calcular a distância entre dois pontos usando a fórmula de Haversine
+  const haversineDistance = (lat1, lon1, lat2, lon2) => {
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI/ 180);
+    const lat1_ = lat1 * (Math.PI / 180);
+    const lat2_ = lat2 * (Math.PI / 180);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLon / 2) *
+        Math.sin(dLon / 2) *
+        Math.cos(lat1_) *
+        Math.cos(lat2_);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
 
   // Obtem a matriz "gps" dos dados JSON
   const gpsArray = selectedRoute ? dataGps[selectedRoute].gps : [];
@@ -93,8 +143,8 @@ export default function Home (){
           />
         </MapView>
       )}
-       {/* Renderiza os botões que permitem ao usuário selecionar a rota */}
-       <View style={styles.buttons}>
+      {/* Renderiza os botões que permitem ao usuário selecionar a rota */}
+      <View style={styles.buttons}>
         {dataGps.map((route, index) => (
           <Button
             key={index}
