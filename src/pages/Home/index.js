@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Button } from 'react-native';
-import MapView, { Polyline } from 'react-native-maps';
+import { StyleSheet, View, Text, Button, Alert } from 'react-native';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import jsonData from '../../data/frontend_data_gps.json';// Importar os dados do arquivo JSON
@@ -17,6 +17,7 @@ export default function Home (){
   const [speed, setSpeed] = useState(0);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const mapViewRef = useRef(null);
+  const markerRef = useRef(null);
 
   // Função que lida com a seleção de uma rota
   const handleRouteSelection = (index) => {
@@ -119,7 +120,7 @@ export default function Home (){
 
   return (
     <View style={styles.container}>
-      {/* Renderiza a mensagem de erro, se houver */}
+      {/* Renderiza a mensagem deerro, se houver */}
       {errorMsg && <Text>{errorMsg}</Text>}
       {/* Renderiza o mapa se a localização estiver disponível */}
       {location && location.coords && (
@@ -141,6 +142,24 @@ export default function Home (){
             strokeColor="#4169E1" // Defina a cor da linha aqui
             strokeWidth={3} // Defina a largura da linha aqui
           />
+          {/* Renderiza o marcador nas coordenadas selecionadas */}
+          {selectedRoute !== null && (
+            <Marker
+              ref={markerRef}
+              coordinate={longitudeLatitudeArray[0]}
+              onPress={() => {
+                Alert.alert(
+                  t('marker_title'),
+                  `${t('speed_message')} ${speed} km/h\n${t('distance_message')} ${haversineDistance(
+                    location.coords.latitude,
+                    location.coords.longitude,
+                    longitudeLatitudeArray[0].latitude,
+                    longitudeLatitudeArray[0].longitude
+                  ).toFixed(2)} km`
+                );
+              }}
+            />
+          )}
         </MapView>
       )}
       {/* Renderiza os botões que permitem ao usuário selecionar a rota */}
